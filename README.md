@@ -6,6 +6,24 @@ This project implements a lightweight ETL pipeline using Python and DuckDB to pr
 CSV files are loaded into DuckDB using `read_csv_auto` and persisted as in-memory tables:
 - full_providers
 - delta_providers
+This step is intentionally minimal and performs no validation or transformation. Its sole responsibility is to materialize raw input data into queryable tables for downstream processing.
+
+## Data Assumptions
+
+The pipeline assumes:
+- Consistent schema across daily files
+- Required fields: id, first_name, last_name, effective_date
+- Delta files contain inserts and updates keyed by `id`
+
+## Delta Validation
+
+Before applying updates, the delta file is validated for:
+
+- Duplicate provider IDs
+- Missing required fields
+- Invalid date ranges
+
+If validation fails, the pipeline stops execution to prevent corrupting the full dataset.
 
 
 ## To run

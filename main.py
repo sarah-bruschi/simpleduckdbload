@@ -2,16 +2,21 @@ import duckdb
 
 conn = duckdb.connect()
 
+def run_sql_file(conn, path, params=None):
+    with open(path) as f:
+        sql = f.read()
 
-conn.execute("""
-CREATE TABLE full_providers AS
-SELECT * FROM read_csv_auto('data/full_dataset.csv');
-""")
+    if params:
+        sql = sql.format(**params)
 
-conn.execute("""
-CREATE TABLE delta_providers AS
-SELECT * FROM read_csv_auto('data/delta.csv');
-""")
+    conn.execute(sql)
+
+run_sql_file(conn, "sql/load.sql", {
+    "full_csv": "data/full_dataset.csv",
+    "delta_csv": "data/delta.csv"
+})
+
+
 
 full_count = conn.execute("""
 SELECT COUNT(*) FROM full_providers
