@@ -15,7 +15,7 @@ install: venv
 run-generator: install
 	$(PYTHON) data_generator/generator.py
 
-run-main: install
+run: install
 	$(PYTHON) main.py
 
 test: install
