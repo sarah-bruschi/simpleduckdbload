@@ -25,6 +25,15 @@ Before applying updates, the delta file is validated for:
 
 If validation fails, the pipeline stops execution to prevent corrupting the full dataset.
 
+## Snapshot Strategy
+
+Before applying any changes from the delta file, the current state of the full dataset is snapshotted to allow for:
+- rollback capability
+- debugging support
+- traceability of data changes
+
+**Note that this is an area of improvement if this were a true production pipeline**
+
 
 ## To run
 Create a python virtual enviornment by running: 
