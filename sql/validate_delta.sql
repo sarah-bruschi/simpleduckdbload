@@ -11,7 +11,7 @@ UNION ALL
 -- missing required
 SELECT 
     'missing_required_fields' AS rule
-    ,COALESCE(id, 'NULL_ID') AS id --this makes it easier to read in logs
+    ,id 
 FROM delta_providers
 WHERE id IS NULL
    OR first_name IS NULL
