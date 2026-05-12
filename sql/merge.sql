@@ -6,7 +6,8 @@ WHEN MATCHED THEN UPDATE SET
     last_name = d.last_name,
     effective_date = d.effective_date,
     termination_date = d.termination_date,
-    primary_care_flag = d.primary_care_flag
+    primary_care_flag = d.primary_care_flag,
+    modified_at = NOW()
 WHEN NOT MATCHED THEN
 INSERT (
     id
@@ -15,6 +16,7 @@ INSERT (
     ,effective_date
     ,termination_date
     ,primary_care_flag
+    ,modified_at
 )
 VALUES (
     d.id
@@ -23,4 +25,5 @@ VALUES (
     ,d.effective_date
     ,d.termination_date
     ,d.primary_care_flag
+    ,NOW()
 );

@@ -212,7 +212,7 @@ If orchestrator triggers pipeline before previous run completes:
 ### 8. Data Lineage Loss
 After merge, no way to know when a record last changed, what previous values were, or which delta introduced a change. This makes debugging and compliance difficult.
 
-**Mitigation**: Add `modified_at`, `modified_by_run_id` columns, maintain full change history table, keep immutable event log of all transformations.
+**Mitigation**: Add  `modified_by_run_id` columns, maintain full change history table, keep immutable event log of all transformations.
 
 ### 9. Terminated Provider Accumulation
 Over time, terminated providers accumulate in `full_providers`. No strategy for archiving inactive records or handling re-activations.
@@ -237,7 +237,7 @@ Validation rules are static SQL. New edge cases discovered post-production canno
 7. **Database transactions**: Wrap merge in transaction; rollback on validation failure
 8. **Primary key constraint**: Enforce uniqueness at DB layer, not just validation
 9. **Run-scoped locking**: File or database lock prevents concurrent execution
-10. **Data lineage columns**: `modified_at`, `modified_by_run_id` on all records
+10. **Data lineage columns**:  `modified_by_run_id` on all records
 
 ---
 

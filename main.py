@@ -137,27 +137,12 @@ def main():
     # -------------
     run_sql_file(conn, "sql/load.sql", {
         "full_csv": "data/full_dataset.csv",
-        "delta_csv": "data_generator/data/delta_bad_invalid_date.csv"
+        "delta_csv": "data/delta.csv"
     })
-    # debugging
-
-    print(conn.execute("SELECT COUNT(*) FROM full_providers").fetchone()[0],
-        conn.execute("SELECT COUNT(*) FROM delta_providers").fetchone()[0])
-
-
-
-
-    # testing actual load
-    # ------------------
-    # 2. INSPECT
-    # ------------------
-    # inspect_table(conn, "full_providers")
-    # inspect_table(conn, "delta_providers")
-
 
 
     # ------------------
-    # 3. VALIDATE DELTA
+    # 2. VALIDATE DELTA
     # ------------------
     EXPECTED_COLUMNS = {
         "id",
@@ -172,7 +157,7 @@ def main():
     run_validation(conn, "sql/validate_delta.sql", "delta_validation")
 
     # ------------------
-    # 4. SNAPSHOT FULL DATASET
+    # 3. SNAPSHOT FULL DATASET
     # ------------------
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -182,37 +167,21 @@ def main():
     })
 
 
-    # create delta history table if time 
-
-    # getting counts
-    before_count = conn.execute("""
-    SELECT COUNT(*) FROM full_providers
-    """).fetchone()[0]
-
-    print("Before merge:", before_count)
-
-    delta_ids = conn.execute("""
-    SELECT id FROM delta_providers
-    """).fetchall()
-
-    delta_ids = [x[0] for x in delta_ids]
-    print("Delta size:", len(delta_ids))
-
     # ------------------
-    # 5.MERGE
+    # 4.MERGE
     # ------------------
 
     run_sql_file(conn, "sql/merge.sql")
 
 
     # ------------------
-    # 6.VALIDATE FINAL
+    # 5.VALIDATE FINAL
     # ------------------
     run_validation(conn, "sql/validate_final.sql", "final_validation")
 
 
     # ------------------
-    # 7.Show diff report
+    # 6.Show diff report
     # ------------------
 
     generate_change_diff_report(conn, snapshot_table)
