@@ -25,6 +25,17 @@ SELECT
     ,id
 FROM delta_providers
 WHERE termination_date IS NOT NULL
-  AND termination_date < effective_date;
---might update to where termination_date == effective_date
+  AND termination_date < effective_date
+
+UNION ALL
+
+SELECT 'invalid_type_cast' AS rule, id
+FROM delta_providers
+WHERE
+    TRY_CAST(id AS VARCHAR) IS NULL
+    OR TRY_CAST(first_name AS VARCHAR) IS NULL
+    OR TRY_CAST(last_name AS VARCHAR) IS NULL
+    OR TRY_CAST(effective_date AS DATE) IS NULL
+    OR TRY_CAST(termination_date AS DATE) IS NULL
+    OR TRY_CAST(primary_care_flag AS BOOLEAN) IS NULL;
  
