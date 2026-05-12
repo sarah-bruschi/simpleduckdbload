@@ -2,6 +2,7 @@ import duckdb
 
 conn = duckdb.connect()
 
+# load files 
 def run_sql_file(conn, path, params=None):
     with open(path) as f:
         sql = f.read()
@@ -71,3 +72,27 @@ def inspect_table(conn, table_name):
 
 inspect_table(conn, "full_providers")
 inspect_table(conn, "delta_providers")
+
+
+#validate delta
+with open("sql/validate_delta.sql") as f:
+    sql = f.read()
+
+    results = conn.execute(sql).fetchall()
+
+    print(f"Validation rows returned: {len(results)}")
+
+    if len(results) > 0:
+        print("Failures:")
+        for r in results[:10]:
+            print(r)
+        raise Exception("Validation failed")
+
+    else:
+        print("Validation passed")
+
+
+# snapshot full dataset
+# create delta history table 
+# merge delta with existing
+# final validation 
