@@ -101,6 +101,32 @@ run_sql_file(conn, "sql/snapshot.sql", {
     "snapshot_table": snapshot_table
 })
 print(conn.execute("SHOW TABLES").fetchall())
-# create delta history table 
+
+# create delta history table if time 
+
+
 # merge delta with existing
+run_sql_file(conn, "sql/merge.sql")
+
+print(conn.execute("""
+SELECT * FROM full_providers
+WHERE id IN (SELECT id FROM delta_providers)
+LIMIT 10
+""").fetchdf())
+
 # final validation 
+with open("sql/validate_final.sql") as f:
+    sql = f.read()
+
+    results = conn.execute(sql).fetchall()
+
+    print(f"Validation rows returned: {len(results)}")
+
+    if len(results) > 0:
+        print("Failures:")
+        for r in results[:10]:
+            print(r)
+        raise Exception("Validation failed")
+
+    else:
+        print("Validation passed")
