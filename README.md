@@ -162,6 +162,85 @@ If productionized, the system would require:
 
 ---
 
+## Operational Concerns — Daily Execution
+
+Running this pipeline daily in production surfaces several classes of issues that require architectural decisions:
+
+### 1. Snapshot Bloat
+Each run creates a timestamped backup table (`providers_snapshot_20260512_143022`). Over a year, this accumulates 365+ tables consuming disk space and complicating metadata queries.
+
+**Mitigation**: Implement retention policy (e.g., keep last 30 days), automated cleanup of old snapshots, or use single "current_snapshot" table with metadata instead of per-run tables.
+
+### 2. Delta File Lifecycle Management
+No tracking of which delta files have been consumed. Repeated pipeline runs against the same delta file can cause double-merging of updates or create inconsistent state.
+
+**Mitigation**: Move processed deltas to archive, log delta fingerprints (filename + checksum), maintain consumption audit trail in metadata table.
+
+### 3. Idempotency Gaps
+If pipeline crashes mid-merge, partial data remains in `full_providers` while snapshot is already created. Re-running creates risk of duplicate inserts or inconsistent state.
+
+**Mitigation**: Wrap merge in database transaction, add run_id tracking throughout pipeline, implement idempotent upsert logic that survives partial executions.
+
+### 4. Performance Degradation Over Time
+- No indexes on `id` column; MERGE performance degrades as `full_providers` grows to millions of rows
+- Validation (especially TRY_CAST checks) runs on every row even after initial load succeeds
+- Query plans may become inefficient after weeks of data accumulation
+
+**Mitigation**: Add PRIMARY KEY constraint on id, create indexes for join performance, optimize validation to only run on new/changed rows.
+
+### 5. Observability Blind Spots
+- No metrics: inserts/updates/deletes per run
+- No structured logging tied to run_id
+- No alerting on validation failures or slow runs
+- Cannot correlate pipeline failures to data quality issues
+
+**Mitigation**: Add run metadata table (run_id, start_time, delta_file, inserts, updates, status), implement structured logging per stage, expose Prometheus metrics for monitoring.
+
+### 6. Schema Evolution
+If provider schema changes (new columns, type changes), old snapshots become incompatible and validation rules may drift.
+
+**Mitigation**: Version validation rules, maintain schema migration playbooks, pin schema version to each run, archive old snapshots separately.
+
+### 7. Concurrent Execution Risk
+If orchestrator triggers pipeline before previous run completes:
+- Race condition on delta file consumption
+- Snapshot table name collisions
+- Delta table gets modified mid-read
+
+**Mitigation**: Implement file-based or database lock, ensure sequential execution, add run_id to all temporary objects.
+
+### 8. Data Lineage Loss
+After merge, no way to know when a record last changed, what previous values were, or which delta introduced a change. This makes debugging and compliance difficult.
+
+**Mitigation**: Add `modified_at`, `modified_by_run_id` columns, maintain full change history table, keep immutable event log of all transformations.
+
+### 9. Terminated Provider Accumulation
+Over time, terminated providers accumulate in `full_providers`. No strategy for archiving inactive records or handling re-activations.
+
+**Mitigation**: Implement archival policy for terminated providers older than threshold, handle re-activation edge cases in merge logic, report on churn metrics separately.
+
+### 10. Validation Rule Stagnation
+Validation rules are static SQL. New edge cases discovered post-production cannot be selectively applied to historical data.
+
+**Mitigation**: Implement validation versioning, allow selective re-validation with new rules, maintain audit trail of rule changes.
+
+---
+
+## Recommended Production Additions
+
+1. **Metadata tracking table**: `(run_id, start_time, delta_file, inserts, updates, validation_status, end_time, error_message)`
+2. **Delta consumption log**: Prevents re-processing of the same delta file
+3. **Idempotency keys**: Delta file checksum + content hash for deduplication
+4. **Change audit table**: Full history of all changes per provider ID
+5. **SLA monitoring**: Alert if daily run exceeds threshold (time or record volume)
+6. **Snapshot retention policy**: Automated cleanup (e.g., keep only last 30 days)
+7. **Database transactions**: Wrap merge in transaction; rollback on validation failure
+8. **Primary key constraint**: Enforce uniqueness at DB layer, not just validation
+9. **Run-scoped locking**: File or database lock prevents concurrent execution
+10. **Data lineage columns**: `modified_at`, `modified_by_run_id` on all records
+
+---
+
 ## Running the Pipeline
 
 Install dependencies:
