@@ -49,6 +49,7 @@ Each provider record contains:
 - `effective_date`
 - `termination_date` (nullable)
 - `primary_care_flag`
+**Note that since `termination_date` is nullable I assumed that it is not a required field**
 
 Delta files represent:
 - new provider inserts
