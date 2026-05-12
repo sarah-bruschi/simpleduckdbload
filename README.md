@@ -2,6 +2,11 @@
 
 This project implements a lightweight ETL pipeline using Python and DuckDB to process daily provider delta files and maintain a full provider dataset.
 
+ ## Data Loading 
+CSV files are loaded into DuckDB using `read_csv_auto` and persisted as in-memory tables:
+- full_providers
+- delta_providers
+
 
 ## To run
 Create a python virtual enviornment by running: 
