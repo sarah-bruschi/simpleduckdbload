@@ -1,0 +1,2 @@
+id,provider_name,npi,specialty,address,city,state,zip,phone,status,effective_date,termination_date,primary_care_flag
+9003,,2573125361,Dermatology,6987 Jackson Way,Port Katelyn,FM,77047,(979)347-4508x098,inactive,2025-02-01,2025-03-20,true

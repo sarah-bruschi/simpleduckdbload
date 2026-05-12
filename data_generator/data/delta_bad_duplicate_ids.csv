@@ -1,0 +1,3 @@
+id,first_name,last_name,effective_date,termination_date,primary_care_flag
+9001,Lori,Bowman,2025-07-21,2026-04-25,false
+9001,Diane,Lara,2025-03-27,,true
