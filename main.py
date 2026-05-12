@@ -1,4 +1,5 @@
 import duckdb
+from datetime import datetime
 
 conn = duckdb.connect()
 
@@ -93,6 +94,13 @@ with open("sql/validate_delta.sql") as f:
 
 
 # snapshot full dataset
+
+timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+snapshot_table = f"providers_snapshot_{timestamp}"
+run_sql_file(conn, "sql/snapshot.sql", {
+    "snapshot_table": snapshot_table
+})
+print(conn.execute("SHOW TABLES").fetchall())
 # create delta history table 
 # merge delta with existing
 # final validation 
