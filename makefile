@@ -18,6 +18,9 @@ run-generator: install
 run-main: install
 	$(PYTHON) main.py
 
+test: install
+	$(PYTHON) -m pytest tests/test_pipeline.py
+
 shell:
 	@echo "Activate with: source $(VENV)/bin/activate"
 
