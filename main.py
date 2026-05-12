@@ -3,7 +3,7 @@ from datetime import datetime
 
 conn = duckdb.connect()
 
-# load files 
+
 def run_sql_file(conn, path, params=None):
     with open(path) as f:
         sql = f.read()
@@ -12,101 +12,88 @@ def run_sql_file(conn, path, params=None):
         sql = sql.format(**params)
 
     conn.execute(sql)
+    
 
+def run_validation(conn, path, name):
+    with open(path) as f:
+        sql = f.read()
+    
+    results = conn.execute(sql).fetchall()
+
+    print(f"[{name}] violations: {len(results)}")
+
+    if results:
+        print(results[:10])
+        raise Exception(f"{name} failed")
+    print(f"{name} passed")
+
+def inspect_table(conn, table_name):
+    print(f"\n=={table_name} ===")
+    print(conn.execute(f"SELECT * FROM {table_name} LIMIT 5").fetchdf())
+    print(conn.execute(f"DESCRIBE {table_name}").fetchdf())
+
+
+
+
+
+
+
+# -------------
+# 1. LOAD
+# -------------
 run_sql_file(conn, "sql/load.sql", {
     "full_csv": "data/full_dataset.csv",
     "delta_csv": "data/delta.csv"
 })
-
-
-
-full_count = conn.execute("""
-SELECT COUNT(*) FROM full_providers
-""").fetchone()[0]
-
-delta_count = conn.execute("""
-SELECT COUNT(*) FROM delta_providers
-""").fetchone()[0]
-
 # debugging
-print("Full providers count:", full_count)
-print("Delta providers count:", delta_count)
+
+print(conn.execute("SELECT COUNT(*) FROM full_providers").fetchone()[0],
+      conn.execute("SELECT COUNT(*) FROM delta_providers").fetchone()[0])
+
+
+
 
 # testing actual load
-def inspect_table(conn, table_name):
-
-    print(f"\n--- {table_name} SAMPLE ROWS ---")
-    print(conn.execute(f"""
-        SELECT * FROM {table_name} LIMIT 5
-    """).fetchdf())
-
-    print(f"\n--- {table_name} SCHEMA ---")
-    print(conn.execute(f"""
-        DESCRIBE {table_name}
-    """).fetchdf())
-
-    print(f"\n--- {table_name} COLUMN CHECK ---")
-
-    expected = {
-        "id",
-        "first_name",
-        "last_name",
-        "effective_date",
-        "termination_date",
-        "primary_care_flag"
-    }
-
-    actual = set(
-        row[1]
-        for row in conn.execute(f"""
-            PRAGMA table_info('{table_name}')
-        """).fetchall()
-    )
-
-    missing = expected - actual
-
-    if missing:
-        raise Exception(f"{table_name} missing columns: {missing}")
-
-    print("Schema OK")
-
-
+# ------------------
+# 2. INSPECT
+# ------------------
 inspect_table(conn, "full_providers")
 inspect_table(conn, "delta_providers")
 
+# ------------------
+# 3. VALIDATE DELTA
+# ------------------
+run_validation(conn, "sql/validate_delta.sql", "delta_validation")
 
-#validate delta
-with open("sql/validate_delta.sql") as f:
-    sql = f.read()
-
-    results = conn.execute(sql).fetchall()
-
-    print(f"Validation rows returned: {len(results)}")
-
-    if len(results) > 0:
-        print("Failures:")
-        for r in results[:10]:
-            print(r)
-        raise Exception("Validation failed")
-
-    else:
-        print("Validation passed")
-
-
-# snapshot full dataset
+# ------------------
+# 4. SNAPSHOT FULL DATASET
+# ------------------
 
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 snapshot_table = f"providers_snapshot_{timestamp}"
 run_sql_file(conn, "sql/snapshot.sql", {
     "snapshot_table": snapshot_table
 })
-print(conn.execute("SHOW TABLES").fetchall())
+
 
 # create delta history table if time 
 
+# ------------------
+# 5.MERGE
+# ------------------
 
-# merge delta with existing
 run_sql_file(conn, "sql/merge.sql")
+
+
+# ------------------
+# 6.VALIDATE FINAL
+# ------------------
+run_validation(conn, "sql/validate_final.sql", "final_validation")
+
+
+# ------------------
+# 7.Export debug
+# ------------------
 
 print(conn.execute("""
 SELECT * FROM full_providers
@@ -114,19 +101,3 @@ WHERE id IN (SELECT id FROM delta_providers)
 LIMIT 10
 """).fetchdf())
 
-# final validation 
-with open("sql/validate_final.sql") as f:
-    sql = f.read()
-
-    results = conn.execute(sql).fetchall()
-
-    print(f"Validation rows returned: {len(results)}")
-
-    if len(results) > 0:
-        print("Failures:")
-        for r in results[:10]:
-            print(r)
-        raise Exception("Validation failed")
-
-    else:
-        print("Validation passed")
