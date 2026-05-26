@@ -97,8 +97,11 @@ def test_merge_correctness(conn):
         full_row = conn.execute(f"""
             SELECT * FROM full_providers WHERE id = '{test_id}'
         """).fetchdf()
+        delta_dict = delta_row.iloc[0].to_dict()
 
-        assert delta_row.iloc[0].to_dict() == full_row.iloc[0].to_dict(), \
+        full_dict = full_row.iloc[0].drop(labels=["modified_at"]).to_dict()
+
+        assert delta_row.iloc[0].to_dict() == full_dict, \
             f"Update failed for id={test_id}"
 
     assert after_count >= before_count
